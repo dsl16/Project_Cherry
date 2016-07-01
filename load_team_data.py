@@ -115,9 +115,13 @@ if __name__ == "__main__":
     
     mess_data = all_movies.copy(deep = True)
     
+    mess_data = mess_data.dropna(subset = ['release_date', 'release_date_wide'])
+        
+    
     mess_data['metascore'] = mess_data['metascore'].div(10)
     mess_data = mess_data.drop(mess_data[mess_data['user_score'] == 'tbd'].index.tolist())
-    mess_data['users-critics'] = mess_data['user_score'].mess_data['subtract(mess_data['metascore'])
+    mess_data['users-critics'] = mess_data['user_score'].subtract(mess_data['metascore'])
+    
     
     plt.scatter(mess_data['users-critics'],mess_data['domestic_gross'])
     plt.scatter(mess_data['num_critic_reviews_4'],mess_data['num_user_ratings'])
