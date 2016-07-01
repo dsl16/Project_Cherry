@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jun 30 14:12:21 2016
+
+@author: EXK747
+"""
+
 """loaddata is a module for accessing scraped data about movies from
 BoxOfficeMojo and Metacritic.
 It's built specifically to work with the data collected for the
@@ -5,6 +12,7 @@ CapitalOne Metis Data Science Python Bootcamp Pilot Extravaganza 2K15.
 """
 
 # imports
+import re
 import os
 import json
 import pprint
@@ -48,6 +56,10 @@ def movie_date_to_datetime(date_string):
     return datetime.date(year, month, day)
 
 def clean_data(data):
+    """This function cleans the data from metacritic
+    when there are dictionaries with values that are
+    lists. It turns each value into its own column."""
+    
     clean_movies = []
     for movie in data:
         clean_dict = {}
@@ -60,11 +72,56 @@ def clean_data(data):
         clean_movies.append(clean_dict)
     return clean_movies
 
+def title_cleaner(movie_dataframe,column):
+    """This removes characters and spaces from strings."""
+    
+    movie_dataframe = movie_dataframe.dropna(subset=[column])
+    movie_dataframe['clean_' + column] = pd.DataFrame(map(lambda x: \
+                                    re.sub('[^a-zA-Z0-9]','',x), \
+                                    movie_dataframe[column]))
+    return movie_dataframe
+    
+def movie_date_to_datetime(date_string):
+    """This function converts strings in the form of
+    YYYY-MM-DD to a datetime date variable""" 
+    
+    year = int(date_string[0:4])
+    month = int(date_string[5:7])
+    day = int(date_string[8:10])
+    return datetime.date(year, month, day)
+
+
 
 if __name__ == "__main__":
+    
     boxofficemovies = get_movies('boxofficemojo')
     unclean_metamovies = get_movies('metacritic')
-    metamovies = [movie for movie in unclean_metamovies if type(movie) != list]
-    metamovies = clean_data(metamovies)
-    meta_df = pd.DataFrame(metamovies)
-    mojo_df = pd.DataFrame(boxofficemovies)
+    
+    metamovies = clean_data([movie for movie in unclean_metamovies if type(movie) != list])
+    
+    boxofficemovies = pd.DataFrame(boxofficemovies)
+    metamovies = pd.DataFrame(metamovies)
+    
+    metamovies = metamovies.drop(metamovies[['genre','genre_2','genre_3','genre_4', \
+                                'genre_5','genre_6','genre_7','genre_8', \
+                                'genre_9','genre_10','unable to retrieve_1', \
+                                'unable to retrieve_2']],axis=1)
+    
+    boxofficemovies = boxofficemovies.dropna(subset = ['title'])
+    metamovies = metamovies.dropna(subset = ['title'])
+    
+    all_movies = pd.merge(boxofficemovies, metamovies, how = 'inner', \
+                            on = ['title'])    
+    
+    mess_data = all_movies.copy(deep = True)
+    
+    mess_data = mess_data.dropna(subset = ['release_date', 'release_date_wide'])
+        
+    
+    mess_data['metascore'] = mess_data['metascore'].div(10)
+    mess_data = mess_data.drop(mess_data[mess_data['user_score'] == 'tbd'].index.tolist())
+    mess_data['users-critics'] = mess_data['user_score'].subtract(mess_data['metascore'])
+    
+    
+    plt.scatter(mess_data['users-critics'],mess_data['domestic_gross'])
+    plt.scatter(mess_data['num_critic_reviews_4'],mess_data['num_user_ratings'])
